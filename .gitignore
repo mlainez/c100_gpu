@@ -3,3 +3,5 @@
 /bench/_build/
 /bench/deps/
 /erl_crash.dump
+__pycache__/
+*.pyc

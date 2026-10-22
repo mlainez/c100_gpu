@@ -1,0 +1,261 @@
+{
+  "format_version": 1,
+  "baseline_id": "l4t-sgm-20261022",
+  "date_utc": "2026-10-22",
+  "hardware": {
+    "board": "OKdo C100",
+    "module": "P3448-0002",
+    "soc": "Tegra210",
+    "gpu": "GM20B",
+    "emc_hz_during_all_timing_samples": 1600000000,
+    "gpu_max_hz": 921600000,
+    "cpu_max_khz": 1479000,
+    "gpu_governor": "nvhost_podgov",
+    "cpu_governor": "schedutil",
+    "power_mode": "MAXN",
+    "boot_id": "548701d7-ed83-4ae0-bee2-850587c8751b"
+  },
+  "stack": {
+    "os": "NVIDIA L4T R32.7.6 / Ubuntu 18.04.6",
+    "kernel": "4.9.337-tegra",
+    "glibc": "2.27",
+    "nvidia_package_version": "32.7.6-20241104234540",
+    "vulkan_driver_api": "1.2.131",
+    "vulkan_loader_api": "1.2.141",
+    "loader_package_metadata": "libvulkan1:arm64 1.1.70+dfsg1-1ubuntu0.18.04.1; actual symlink resolves to NVIDIA tegra/libvulkan.so.1.2.141",
+    "iree_release": "3.11.0",
+    "iree_revision": "e4a3b0405d7d23554da26403658d0e8c3c5ecf25",
+    "iree_reported_version": "3.11.0rc20260316",
+    "llvm_reported_version": "23.0.0git",
+    "runtime_build_type": "Release",
+    "runtime_source_patches": [],
+    "host_cross_compiler": "aarch64-linux-gnu-gcc 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1)",
+    "target_sysroot": "Ubuntu 18.04 aarch64 glibc 2.27 / libstdc++ 7, static libstdc++ and libgcc",
+    "glslang_version": "16.1.0",
+    "shader_target_env": "vulkan1.1",
+    "iree_spirv_target_features": "spirv:v1.3,cap:Shader,cap:GroupNonUniform,cap:GroupNonUniformShuffle",
+    "serial_compiler_flags": [
+      "--iree-hal-target-backends=vulkan-spirv",
+      "--iree-execution-model=async-internal",
+      "--iree-hal-memoization=false",
+      "--iree-hal-external-resources-mappable=true"
+    ],
+    "async_compiler_flags": [
+      "--iree-hal-target-backends=vulkan-spirv",
+      "--iree-execution-model=async-external",
+      "--iree-hal-memoization=false",
+      "--iree-hal-external-resources-mappable=true"
+    ],
+    "cuda_used": false,
+    "opencv_or_evision_used_for_this_graph": false,
+    "elixir_used_for_host_export_only": true
+  },
+  "algorithm": {
+    "name": "classic 48-bit Census SGM",
+    "disparities": 64,
+    "paths": 3,
+    "p1": 8,
+    "p2": 64,
+    "uniqueness": 1.0526315789473684,
+    "dp_block": 8,
+    "select_lanes": 8,
+    "path_schedule": "tiled",
+    "selector": "projected",
+    "projection": "shared",
+    "fusion": "vertical",
+    "subpixel": "f32",
+    "filter": "median",
+    "external_resources_mappable": true,
+    "stages": [
+      "census",
+      "horizontal paths",
+      "fused vertical path and selection",
+      "projected consistency",
+      "median filter"
+    ],
+    "pyramid": false,
+    "roi": false
+  },
+  "fixture": {
+    "source": "Sintel stereo",
+    "sequence": "alley_1",
+    "pass": "clean",
+    "frame": 1,
+    "original_width": 1024,
+    "original_height": 436,
+    "image_resampling": "Lanczos",
+    "resized_directly": true,
+    "input_element_type": "i32",
+    "output_element_type": "f32",
+    "input_and_reference_storage": "raw little-endian, row-major",
+    "reference_origin": "previous Nerves/NVK result, with cross-GPU agreement checks",
+    "absolute_output_tolerance": 0.0001,
+    "relative_output_tolerance": 0,
+    "quality_caveats": [
+      "720p fixture is upscaled and aspect-changed, not native camera optics",
+      "D64 at 1280 width has half the relative disparity range of D64 at 640 width"
+    ]
+  },
+  "measurement": {
+    "metric": "resident-input complete GPU-graph invocations per second",
+    "input_upload_timed": false,
+    "output_readback_timed": false,
+    "camera_or_network_timed": false,
+    "elixir_scheduling_timed": false,
+    "benchmark_repetitions": 3,
+    "benchmark_min_time": "0.5s",
+    "device_allocator": "caching:device_local=256mib;512mib;64",
+    "sync_batch_size": 1,
+    "async_batch_size": 4,
+    "async_batch_concurrency": 4,
+    "guard": {
+      "max_seconds": 90,
+      "max_temperature_millicelsius": 70000,
+      "min_available_memory_kb": 1500000,
+      "stop_on_first_new_gpu_error": true
+    },
+    "correctness_checks_passed": 4,
+    "timing_probes_passed": 4,
+    "new_gpu_errors": 0
+  },
+  "cases": [
+    {
+      "name": "cached-vga",
+      "shape": "480x640",
+      "mean_fps": 45.796,
+      "correctness": {
+        "executable": "bin/iree-run-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/legacy-vga-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=480x640xi32=@input/vga.left.bin",
+          "--input=480x640xi32=@input/vga.right.bin",
+          "--expected_output=480x640xf32=@input/vga.expected.bin",
+          "--expected_f32_threshold=0.0001"
+        ]
+      },
+      "timing": {
+        "executable": "bin/iree-benchmark-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/legacy-vga-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=480x640xi32=@input/vga.left.bin",
+          "--input=480x640xi32=@input/vga.right.bin",
+          "--batch_size=1",
+          "--benchmark_min_time=0.5s",
+          "--benchmark_repetitions=3",
+          "--benchmark_out=results/cached-vga.json",
+          "--benchmark_out_format=json"
+        ]
+      }
+    },
+    {
+      "name": "async-vga",
+      "shape": "480x640",
+      "mean_fps": 45.9308,
+      "correctness": {
+        "executable": "bin/iree-run-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/async-vga-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=480x640xi32=@input/vga.left.bin",
+          "--input=480x640xi32=@input/vga.right.bin",
+          "--expected_output=480x640xf32=@input/vga.expected.bin",
+          "--expected_f32_threshold=0.0001"
+        ]
+      },
+      "timing": {
+        "executable": "bin/iree-benchmark-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/async-vga-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=480x640xi32=@input/vga.left.bin",
+          "--input=480x640xi32=@input/vga.right.bin",
+          "--batch_size=4",
+          "--batch_concurrency=4",
+          "--benchmark_min_time=0.5s",
+          "--benchmark_repetitions=3",
+          "--benchmark_out=results/async-vga.json",
+          "--benchmark_out_format=json"
+        ]
+      }
+    },
+    {
+      "name": "cached-720",
+      "shape": "720x1280",
+      "mean_fps": 15.5942,
+      "correctness": {
+        "executable": "bin/iree-run-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/legacy-720-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=720x1280xi32=@input/720.left.bin",
+          "--input=720x1280xi32=@input/720.right.bin",
+          "--expected_output=720x1280xf32=@input/720.expected.bin",
+          "--expected_f32_threshold=0.0001"
+        ]
+      },
+      "timing": {
+        "executable": "bin/iree-benchmark-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/legacy-720-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=720x1280xi32=@input/720.left.bin",
+          "--input=720x1280xi32=@input/720.right.bin",
+          "--batch_size=1",
+          "--benchmark_min_time=0.5s",
+          "--benchmark_repetitions=3",
+          "--benchmark_out=results/cached-720.json",
+          "--benchmark_out_format=json"
+        ]
+      }
+    },
+    {
+      "name": "async-720",
+      "shape": "720x1280",
+      "mean_fps": 15.5729,
+      "correctness": {
+        "executable": "bin/iree-run-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/async-720-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=720x1280xi32=@input/720.left.bin",
+          "--input=720x1280xi32=@input/720.right.bin",
+          "--expected_output=720x1280xf32=@input/720.expected.bin",
+          "--expected_f32_threshold=0.0001"
+        ]
+      },
+      "timing": {
+        "executable": "bin/iree-benchmark-module",
+        "argv": [
+          "--device=vulkan",
+          "--module=models/async-720-d64.vmfb",
+          "--function=main",
+          "--device_allocator=caching:device_local=256mib;512mib;64",
+          "--input=720x1280xi32=@input/720.left.bin",
+          "--input=720x1280xi32=@input/720.right.bin",
+          "--batch_size=4",
+          "--batch_concurrency=4",
+          "--benchmark_min_time=0.5s",
+          "--benchmark_repetitions=3",
+          "--benchmark_out=results/async-720.json",
+          "--benchmark_out_format=json"
+        ]
+      }
+    }
+  ]
+}

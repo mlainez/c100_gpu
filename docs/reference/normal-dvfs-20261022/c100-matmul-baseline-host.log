@@ -1,0 +1,8 @@
+DEVICE=vulkan://GPU-00000000030000000000000000000000
+MODEL=default written_inputs=[]
+MATMUL model=default n=1024 b=2.0 ms=[6.836, 7.155, 9.395, 8.24, 7.793] includes=invoke_and_readback inputs_unchanged=true
+MATMUL model=default n=1024 b=3.0 ms=[6.964, 9.519, 7.284, 7.117, 8.066] includes=invoke_and_readback inputs_unchanged=true
+MODEL=c100_tuning written_inputs=[]
+MATMUL model=c100_tuning n=1024 b=2.0 ms=[7.689, 8.217, 7.836, 8.087, 8.129] includes=invoke_and_readback inputs_unchanged=true
+MATMUL model=c100_tuning n=1024 b=3.0 ms=[6.738, 8.187, 6.947, 7.051, 8.195] includes=invoke_and_readback inputs_unchanged=true
+MATMUL_PASS

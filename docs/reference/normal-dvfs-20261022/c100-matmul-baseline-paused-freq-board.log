@@ -1,0 +1,39 @@
+BOOT_ID=6f672cb9-e70d-433c-8894-7231f93bf6b7
+GOVERNOR=simple_ondemand
+GPU_MAX=921600000
+GPU_MIN=76800000
+WARNING: NVK is not a conformant Vulkan implementation, testing use only.
+WARNING: NVK is not a conformant Vulkan implementation, testing use only.
+DEVICE=vulkan://GPU-2b01de10000000000000000100000000
+PAUSE_MS=100
+MODEL=default written_inputs=[]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+MATMUL model=default n=1024 b=2.0 ms=[70.459, 157.464, 119.99, 130.131, 159.772] includes=invoke_and_readback inputs_unchanged=true
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+MATMUL model=default n=1024 b=3.0 ms=[71.119, 118.256, 123.788, 120.173, 119.957] includes=invoke_and_readback inputs_unchanged=true
+MODEL=c100_tuning written_inputs=[]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+MATMUL model=c100_tuning n=1024 b=2.0 ms=[30.468, 94.665, 117.872, 114.9, 117.788] includes=invoke_and_readback inputs_unchanged=true
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+FREQUENCY before=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "76800000"}] after=[{"/sys/class/devfreq/57000000.gpu/cur_freq", "921600000"}]
+MATMUL model=c100_tuning n=1024 b=3.0 ms=[32.541, 96.499, 112.593, 114.216, 112.305] includes=invoke_and_readback inputs_unchanged=true
+MATMUL_PASS
+CHILD_EXIT=0
+GPU_ERRORS=0
+BOARD_MATMUL_PASS
+:ok

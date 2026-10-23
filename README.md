@@ -36,27 +36,45 @@ continuous and idle-to-load measurements with the accepted firmware.
 
 ## YOLOv5s through IREE on the GPU
 
-YOLOv5s (640x640, fp32) compiled by IREE for NVK runs at 589 ms per frame on
-the C100 (545 ms with the runtime's caching allocator), against 453 ms for
-ncnn on the four A57 cores, 1183 ms for ncnn's own Vulkan path and 931 ms for
-OpenCV DNN. Every output value matches OpenCV DNN's CPU result within 0.05.
+YOLOv5s (640x640) compiled by IREE for NVK runs at 458 ms per frame on the
+C100 in fp16 and 589 ms in fp32, against 453 ms for ncnn on the four A57
+cores, 1183 ms for ncnn's own Vulkan path on NVK and 931 ms for OpenCV DNN.
+The fp16 detections match OpenCV DNN's fp32 result (54 of 54 candidates,
+same classes); the fp32 output matches within 0.05.
 
-The recipe is vendor-neutral and lives in `../nx_iree/bench/yolo`
-(fp32 conversion, ONNX padding, im2col + channels-last compile, reference
-check). This library adds only the GM20B part: the `turing` preset and
-`priv/tuning/yolov5s_maxwell.mlir` (`iree_tuning: {C100GPU.Tuning,
-:yolov5s_maxwell}`), which gives the stem and the 20x20-map matmuls an 8x4
-output block per thread on small workgroups:
+The recipe is vendor-neutral and lives in `../nx_iree/bench/yolo`. This
+library adds only the GM20B tuning:
 
 ```sh
+# fp16 export, f16 accumulators (fastest)
+F16=1 ../nx_iree/bench/yolo/compile.sh yolov5s-fp16.mlir yolov5s.vmfb pascal priv/tuning/yolov5s_maxwell_f16.mlir
+# fp32
 ../nx_iree/bench/yolo/compile.sh yolov5s.mlir yolov5s.vmfb turing priv/tuning/yolov5s_maxwell.mlir
 ```
 
-Without the spec the padded model runs at 738 ms; unpadded and untuned with
-the `rdna1` preset it took 1.9 s. Of the remaining 532 ms of GPU time per
-frame, matmuls take 346 ms (26-78 GFLOPS depending on the shape), im2col
-81 ms, layout transposes 46 ms and the detect head's odd-width copies 38 ms.
-Vectorized tilings for the im2col and transposes measured slower.
+The GM20B runs packed fp16 (HFMA2) at twice the f32 rate, through the
+system's NAK and NVK patches 0008 and 0009. The fp16 export alone does not
+use it: the ONNX importer accumulates f16 convolutions in f32, so NAK emits
+f32 FMAs plus conversions, and the frame gets slower (886 ms).
+`F16=1` (`--iree-input-demote-f32-to-f16`) keeps accumulators in f16, as
+TensorRT's fp16 mode does; the matmuls then compile to HFMA2. With the
+compiler's default f16 tiles that gives 706 ms, and the spec's 8x8 f16
+blocks per thread on small workgroups give 458 ms. The `turing` preset
+cannot compile the f16 graph (its cooperative-matrix path rejects the stem).
+
+The fp32 spec gives the stem and the 20x20-map matmuls an 8x4 output block
+per thread. Without it the padded fp32 model runs at 738 ms; unpadded and
+untuned with the `rdna1` preset it took 1.9 s. In fp32, matmuls take
+346 ms of the remaining 532 ms of GPU time, im2col 81 ms, layout transposes
+46 ms and the detect head's odd-width copies 38 ms.
+
+Published Jetson Nano results on NVIDIA's own stack are faster. ncnn's
+Vulkan path on NVIDIA's L4T driver runs YOLOv5s at about 5 FPS on a
+640x480 letterboxed input (Qengineering's YoloV5-ncnn-Jetson-Nano), where
+the same ncnn shaders take 1183 ms at 640x640 on NVK, about 4.5x slower
+after scaling for the input area. TensorRT fp16 is reported at roughly
+60-100 ms at 640. The remaining gap is therefore mainly NAK's Maxwell code
+generation and NVK, not the model or the IREE graph.
 
 The current development dependency uses the sibling `../nx_iree` checkout.
 Run `mix deps.get` and `mix test` for ordinary tests. The Vulkan matmul

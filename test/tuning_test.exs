@@ -20,7 +20,7 @@ defmodule C100GPU.TuningTest do
   end
 
   test "every spec is served for the Vulkan backend" do
-    for name <- [:maxwell_matmul, :yolov5s_maxwell] do
+    for name <- [:maxwell_matmul, :yolov5s_maxwell, :yolov5s_maxwell_f16] do
       assert {:ok, spec, ["vulkan-spirv"]} = C100GPU.Tuning.fetch(name)
       assert spec =~ "iree_codegen.tuning_spec_entrypoint"
     end

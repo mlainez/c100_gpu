@@ -7,16 +7,18 @@ defmodule C100GPU.Tuning do
 
   `:yolov5s_maxwell` overrides two matmul families of YOLOv5s compiled with
   im2col convolutions and the padded ONNX graph from
-  `nx_iree/bench/yolo`; see the README.
+  `nx_iree/bench/yolo`, in f32; `:yolov5s_maxwell_f16` does the same for the
+  fp16 export compiled with f16 accumulators. See the README.
   """
 
   @behaviour NxIREE.Tuning
-  @specs Map.new([:maxwell_matmul, :yolov5s_maxwell], fn name ->
+  @specs Map.new([:maxwell_matmul, :yolov5s_maxwell, :yolov5s_maxwell_f16], fn name ->
            {name, File.read!(Path.expand("../../priv/tuning/#{name}.mlir", __DIR__))}
          end)
 
   @external_resource Path.expand("../../priv/tuning/maxwell_matmul.mlir", __DIR__)
   @external_resource Path.expand("../../priv/tuning/yolov5s_maxwell.mlir", __DIR__)
+  @external_resource Path.expand("../../priv/tuning/yolov5s_maxwell_f16.mlir", __DIR__)
 
   @impl true
   def fetch(name) when is_map_key(@specs, name), do: {:ok, Map.fetch!(@specs, name), ["vulkan-spirv"]}

@@ -36,45 +36,36 @@ continuous and idle-to-load measurements with the accepted firmware.
 
 ## YOLOv5s through IREE on the GPU
 
-YOLOv5s (640x640) compiled by IREE for NVK runs at 458 ms per frame on the
-C100 in fp16 and 589 ms in fp32, against 453 ms for ncnn on the four A57
-cores, 1183 ms for ncnn's own Vulkan path on NVK and 931 ms for OpenCV DNN.
-The fp16 detections match OpenCV DNN's fp32 result (54 of 54 candidates,
-same classes); the fp32 output matches within 0.05.
+YOLOv5s compiled by IREE for NVK runs at 199 ms per frame (5.0 FPS) on a
+640x512 input, the letterboxed size of a 4:3 frame, and 242 ms at 640x640.
+Its detections match onnxruntime's fp32 result. For comparison, ncnn's
+Vulkan path on NVIDIA's own L4T driver reaches about 5 FPS on 640x480
+inputs (Qengineering's YoloV5-ncnn-Jetson-Nano), ncnn on the four A57 cores
+takes 453 ms and ncnn's Vulkan path on NVK 1183 ms at 640x640.
 
 The recipe is vendor-neutral and lives in `../nx_iree/bench/yolo`. This
-library adds only the GM20B tuning:
+library adds only the GM20B spec:
 
 ```sh
-# fp16 export, f16 accumulators (fastest)
-F16=1 ../nx_iree/bench/yolo/compile.sh yolov5s-fp16.mlir yolov5s.vmfb pascal priv/tuning/yolov5s_maxwell_f16.mlir
-# fp32
-../nx_iree/bench/yolo/compile.sh yolov5s.mlir yolov5s.vmfb turing priv/tuning/yolov5s_maxwell.mlir
+../nx_iree/bench/yolo/prepare.sh yolov5s.onnx yolov5s-512x640 512 640   # fp16 export
+F16=1 WINOGRAD=1 ../nx_iree/bench/yolo/compile.sh yolov5s-512x640.mlir yolov5s.vmfb pascal priv/tuning/yolov5s_maxwell_f16.mlir
 ```
 
-The GM20B runs packed fp16 (HFMA2) at twice the f32 rate, through the
-system's NAK and NVK patches 0008 and 0009. The fp16 export alone does not
-use it: the ONNX importer accumulates f16 convolutions in f32, so NAK emits
-f32 FMAs plus conversions, and the frame gets slower (886 ms).
-`F16=1` (`--iree-input-demote-f32-to-f16`) keeps accumulators in f16, as
-TensorRT's fp16 mode does; the matmuls then compile to HFMA2. With the
-compiler's default f16 tiles that gives 706 ms, and the spec's 8x8 f16
-blocks per thread on small workgroups give 458 ms. The `turing` preset
-cannot compile the f16 graph (its cooperative-matrix path rejects the stem).
+The GM20B runs packed fp16 (HFMA2) at twice the f32 rate through the
+system's NAK and NVK patches 0008 and 0009, but only with f16 accumulators
+(`F16=1`); the importer's default f32 accumulators made fp16 slower than
+fp32. From the full export in fp32 at 640x640 (589 ms with
+`priv/tuning/yolov5s_maxwell.mlir`) the steps were: fp16 with f16
+accumulators 458 ms, Detect layer decoded on the host 427 ms, a spec with
+8x4 blocks per thread and no register spills 331 ms, Winograd 300 ms,
+640x512 254 ms, concatenated 1x1 convolutions split 225 ms, Focus stem and
+the pooling rule 199 ms.
 
-The fp32 spec gives the stem and the 20x20-map matmuls an 8x4 output block
-per thread. Without it the padded fp32 model runs at 738 ms; unpadded and
-untuned with the `rdna1` preset it took 1.9 s. In fp32, matmuls take
-346 ms of the remaining 532 ms of GPU time, im2col 81 ms, layout transposes
-46 ms and the detect head's odd-width copies 38 ms.
-
-Published Jetson Nano results on NVIDIA's own stack are faster. ncnn's
-Vulkan path on NVIDIA's L4T driver runs YOLOv5s at about 5 FPS on a
-640x480 letterboxed input (Qengineering's YoloV5-ncnn-Jetson-Nano), where
-the same ncnn shaders take 1183 ms at 640x640 on NVK, about 4.5x slower
-after scaling for the input area. TensorRT fp16 is reported at roughly
-60-100 ms at 640. The remaining gap is therefore mainly NAK's Maxwell code
-generation and NVK, not the model or the IREE graph.
+In the last profile the GPU is busy 186 ms per frame: matmuls 135 ms at
+63 GFLOPS on average (out of about 440 GFLOPS fp16 peak), Winograd
+transforms and im2col copies 29 ms, other copies 16 ms. The small-K 1x1
+convolutions (20-33 GFLOPS) and Winograd's batched matmuls on the small
+maps are the least efficient; tiling them differently measured slower.
 
 The current development dependency uses the sibling `../nx_iree` checkout.
 Run `mix deps.get` and `mix test` for ordinary tests. The Vulkan matmul

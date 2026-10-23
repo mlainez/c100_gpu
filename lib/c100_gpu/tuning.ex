@@ -7,8 +7,10 @@ defmodule C100GPU.Tuning do
 
   `:yolov5s_maxwell` overrides two matmul families of YOLOv5s compiled with
   im2col convolutions and the padded ONNX graph from
-  `nx_iree/bench/yolo`, in f32; `:yolov5s_maxwell_f16` does the same for the
-  fp16 export compiled with f16 accumulators. See the README.
+  `nx_iree/bench/yolo`, in f32; `:yolov5s_maxwell_f16` covers the fp16 model
+  from that directory's `prepare.sh`, compiled with f16 accumulators and
+  Winograd, at any input size whose feature maps divide its tiles. See the
+  README.
   """
 
   @behaviour NxIREE.Tuning

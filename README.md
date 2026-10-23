@@ -19,10 +19,11 @@ delta, clean GPU logs and actual verification of Nerves booting from SD.
 Use the existing Maxwell matmul tuning with:
 
 ```elixir
-NxIREE.export(&Nx.dot/2, templates,
-  iree_compiler_flags: ["--iree-hal-target-backends=vulkan-spirv"],
-  iree_tuning: {C100GPU.Tuning, :maxwell_matmul}
-)
+flags =
+  ["--iree-hal-target-backends=vulkan-spirv" | C100GPU.Target.compiler_flags()] ++
+    C100GPU.Tuning.compiler_flags(:maxwell_matmul)
+
+NxIREE.export(&Nx.dot/2, templates, iree_compiler_flags: flags)
 ```
 
 `C100GPU.Target.compiler_flags/0` supplies the C100 NVK capability list.

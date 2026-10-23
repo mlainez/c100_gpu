@@ -5,17 +5,17 @@
 #
 #   OUT=/tmp/distilbert mix run jetson/export_distilbert.exs
 #
-# NXIREE_FLAGS adds compiler flags, TUNING selects an :iree_tuning spec (e.g.
+# NXIREE_FLAGS adds compiler flags, TUNING selects a C100GPU.Tuning spec (e.g.
 # maxwell_matmul) and SUFFIX names the variant: distilbert-<target><suffix>.bin.
 Logger.configure(level: :warning)
 out = System.get_env("OUT", "distilbert")
 extra_flags = String.split(System.get_env("NXIREE_FLAGS", ""), " ", trim: true)
 suffix = System.get_env("SUFFIX", "")
 
-tuning =
+tuning_flags =
   case System.get_env("TUNING") do
-    nil -> nil
-    "maxwell_matmul" -> {C100GPU.Tuning, :maxwell_matmul}
+    nil -> []
+    "maxwell_matmul" -> C100GPU.Tuning.compiler_flags(:maxwell_matmul)
     name -> raise ArgumentError, "unknown C100 tuning spec #{inspect(name)}"
   end
 
@@ -50,8 +50,8 @@ targets = [
 templates = [Nx.to_template(data), Nx.to_template(inputs)]
 
 for {target, extra} <- targets do
-  flags = ["--iree-hal-target-backends=vulkan-spirv" | extra] ++ extra_flags
-  bin = NxIREE.export(forward, templates, iree_compiler_flags: flags, iree_tuning: tuning)
+  flags = ["--iree-hal-target-backends=vulkan-spirv" | extra] ++ extra_flags ++ tuning_flags
+  bin = NxIREE.export(forward, templates, iree_compiler_flags: flags)
   File.write!(Path.join(out, "distilbert-#{target}#{suffix}.bin"), bin)
   IO.puts("#{target}#{suffix}: #{byte_size(bin)} bytes")
 end

@@ -11,7 +11,10 @@ defmodule C100GPU.TuningTest do
       NxIREE.export(
         &Nx.dot/2,
         [template, template],
-        flags ++ [iree_tuning: {C100GPU.Tuning, :maxwell_matmul}]
+        iree_compiler_flags: [
+          "--iree-hal-target-backends=vulkan-spirv"
+          | C100GPU.Tuning.compiler_flags(:maxwell_matmul)
+        ]
       )
       |> :erlang.binary_to_term()
 
@@ -19,13 +22,15 @@ defmodule C100GPU.TuningTest do
     refute tuned.bytecode == plain.bytecode
   end
 
-  test "every spec is served for the Vulkan backend" do
+  test "every spec is shipped and passed as a compiler flag" do
     for name <- [:maxwell_matmul, :yolov5s_maxwell, :yolov5s_maxwell_f16] do
-      assert {:ok, spec, ["vulkan-spirv"]} = C100GPU.Tuning.fetch(name)
-      assert spec =~ "iree_codegen.tuning_spec_entrypoint"
+      assert ["--iree-codegen-transform-dialect-library=" <> path] =
+               C100GPU.Tuning.compiler_flags(name)
+
+      assert File.read!(path) =~ "iree_codegen.tuning_spec_entrypoint"
     end
 
-    assert C100GPU.Tuning.fetch(:unknown) == :error
+    assert_raise FunctionClauseError, fn -> C100GPU.Tuning.compiler_flags(:unknown) end
   end
 
   @tag :hardware
@@ -41,7 +46,7 @@ defmodule C100GPU.TuningTest do
       Nx.Defn.jit(&Nx.dot/2,
         compiler: NxIREE.Compiler,
         iree_runtime_options: [device: gpu],
-        iree_tuning: {C100GPU.Tuning, :maxwell_matmul}
+        iree_compiler_flags: C100GPU.Tuning.compiler_flags(:maxwell_matmul)
       ).(a, a)
       |> Nx.backend_transfer(Nx.BinaryBackend)
 

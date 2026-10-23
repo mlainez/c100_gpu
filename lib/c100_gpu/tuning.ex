@@ -1,28 +1,33 @@
 defmodule C100GPU.Tuning do
   @moduledoc """
-  IREE tuning measured on the C100's Tegra210 GM20B GPU.
+  IREE tuning specs measured on the C100's Tegra210 GM20B GPU.
 
-  Select the matmul spec with `iree_tuning: {C100GPU.Tuning, :maxwell_matmul}`.
-  It uses 64x64x8 tiles, 16x8 threads and a single buffering stage.
+  Each spec is returned as `iree-compile` flags for `:iree_compiler_flags`:
 
-  `:yolov5s_maxwell` overrides two matmul families of YOLOv5s compiled with
-  im2col convolutions and the padded ONNX graph from
-  `nx_iree/bench/yolo`, in f32; `:yolov5s_maxwell_f16` covers the fp16 model
-  from that directory's `prepare.sh`, compiled with f16 accumulators and
-  Winograd, at any input size whose feature maps divide its tiles. See the
-  README.
+      flags = C100GPU.Target.compiler_flags() ++ C100GPU.Tuning.compiler_flags(:maxwell_matmul)
+      Nx.Defn.jit(&Nx.dot/2, compiler: NxIREE.Compiler, iree_compiler_flags: flags)
+
+    * `:maxwell_matmul` - 64x64x8 tiles, 16x8 threads and a single buffering
+      stage, for plain matmuls.
+    * `:yolov5s_maxwell` - two matmul families of YOLOv5s in f32, compiled
+      with im2col convolutions; see the README.
+    * `:yolov5s_maxwell_f16` - the f16 YOLOv5s graph from
+      `nx_iree/bench/yolo`, compiled with f16 accumulators and Winograd.
   """
 
-  @behaviour NxIREE.Tuning
-  @specs Map.new([:maxwell_matmul, :yolov5s_maxwell, :yolov5s_maxwell_f16], fn name ->
-           {name, File.read!(Path.expand("../../priv/tuning/#{name}.mlir", __DIR__))}
-         end)
+  @specs ~w(maxwell_matmul yolov5s_maxwell yolov5s_maxwell_f16)a
 
-  @external_resource Path.expand("../../priv/tuning/maxwell_matmul.mlir", __DIR__)
-  @external_resource Path.expand("../../priv/tuning/yolov5s_maxwell.mlir", __DIR__)
-  @external_resource Path.expand("../../priv/tuning/yolov5s_maxwell_f16.mlir", __DIR__)
+  for spec <- @specs do
+    @external_resource Path.expand("../../priv/tuning/#{spec}.mlir", __DIR__)
+  end
 
-  @impl true
-  def fetch(name) when is_map_key(@specs, name), do: {:ok, Map.fetch!(@specs, name), ["vulkan-spirv"]}
-  def fetch(_), do: :error
+  @doc "Returns the compiler flags that apply the named tuning spec."
+  def compiler_flags(spec) when spec in @specs do
+    ["--iree-codegen-transform-dialect-library=" <> path(spec)]
+  end
+
+  @doc "Returns the path of the named tuning spec."
+  def path(spec) when spec in @specs do
+    Path.join([:code.priv_dir(:c100_gpu), "tuning", "#{spec}.mlir"])
+  end
 end

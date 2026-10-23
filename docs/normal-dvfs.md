@@ -58,8 +58,8 @@ Evidence: `stereo-frequency-{baseline,affinity}-board.log` and
 
 ## Whole-line kernel comparison
 
-The portable stereo kernels now live in `nx_iree/bench/stereo`, imported
-through its generic `NxIREE.Vulkan.export/4` API. At the same accepted clock,
+The portable stereo kernels, then in `nx_iree/bench/stereo` and now the
+`nx_stereo` library, were imported through `NxIREE.Vulkan.export/4`. At the same accepted clock,
 the final subgroup version took 11.004–14.838 ms including readback for
 160×120×64, with a 3.402 ms median invocation and 11.138 ms median total.
 The previous Nx path measured a 109.407 ms total median in that comparison.

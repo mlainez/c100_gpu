@@ -40,35 +40,23 @@ YOLOv5s (640x640, fp32) compiled by IREE for NVK runs at 589 ms per frame on
 the C100 (545 ms with the runtime's caching allocator), against 453 ms for
 ncnn on the four A57 cores, 1183 ms for ncnn's own Vulkan path and 931 ms for
 OpenCV DNN. Every output value matches OpenCV DNN's CPU result within 0.05.
-Three things make the compiled model fast enough to be usable:
 
-* `--iree-global-opt-use-im2col-for-convs` with channels-last preprocessing:
-  IREE's direct SPIR-V convolution codegen produces wrong output for NCHW 3x3
-  convolutions and takes about 300 ms per layer in NHWC;
-* `scripts/pad_yolov5_onnx.py`: a fourth zero input channel and a 256th zero
-  output channel on the detect heads give the stem and detect-head matmuls
-  dimensions the compiler can tile (K = 108 and N = 255 fell back to a
-  2 GFLOPS path that cost 45 % of the frame);
-* `priv/tuning/yolov5s_maxwell.mlir` (`iree_tuning: {C100GPU.Tuning,
-  :yolov5s_maxwell}`): thinner workgroups with an 8x4 output block per thread
-  for the stem and the 20x20-map matmuls. The `turing` target preset is the
-  fastest of IREE's presets here; `pascal` is within 5 %, `rdna1` is 50 %
-  slower.
+The recipe is vendor-neutral and lives in `../nx_iree/bench/yolo`
+(fp32 conversion, ONNX padding, im2col + channels-last compile, reference
+check). This library adds only the GM20B part: the `turing` preset and
+`priv/tuning/yolov5s_maxwell.mlir` (`iree_tuning: {C100GPU.Tuning,
+:yolov5s_maxwell}`), which gives the stem and the 20x20-map matmuls an 8x4
+output block per thread on small workgroups:
 
 ```sh
-python3 scripts/pad_yolov5_onnx.py yolov5s-fp32.onnx yolov5s-padded.onnx
-iree-import-onnx yolov5s-padded.onnx -o yolov5s.mlir
-iree-compile yolov5s.mlir --iree-input-type=onnx --iree-hal-target-backends=vulkan-spirv \
-  --iree-vulkan-target=turing --iree-global-opt-use-im2col-for-convs \
-  '--iree-preprocessing-pass-pipeline=builtin.module(util.func(iree-preprocessing-convert-conv-to-channels-last))' \
-  --iree-codegen-transform-dialect-library=priv/tuning/yolov5s_maxwell.mlir -o yolov5s.vmfb
+../nx_iree/bench/yolo/compile.sh yolov5s.mlir yolov5s.vmfb turing priv/tuning/yolov5s_maxwell.mlir
 ```
 
-The exported ultralytics model must be fp32 (the fp16 export exceeds the
-GM20B's 48 KB of shared memory in IREE's codegen). Of the remaining 532 ms of
-GPU time per frame, matmuls take 346 ms (26-78 GFLOPS depending on the shape),
-im2col 81 ms, layout transposes 46 ms and the detect head's odd-width copies
-38 ms; vectorized tilings for the im2col and transposes measured slower.
+Without the spec the padded model runs at 738 ms; unpadded and untuned with
+the `rdna1` preset it took 1.9 s. Of the remaining 532 ms of GPU time per
+frame, matmuls take 346 ms (26-78 GFLOPS depending on the shape), im2col
+81 ms, layout transposes 46 ms and the detect head's odd-width copies 38 ms.
+Vectorized tilings for the im2col and transposes measured slower.
 
 The current development dependency uses the sibling `../nx_iree` checkout.
 Run `mix deps.get` and `mix test` for ordinary tests. The Vulkan matmul

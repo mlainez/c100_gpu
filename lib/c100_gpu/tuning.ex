@@ -7,7 +7,7 @@ defmodule C100GPU.Tuning do
 
   `:yolov5s_maxwell` overrides two matmul families of YOLOv5s compiled with
   im2col convolutions and the padded ONNX graph from
-  `scripts/pad_yolov5_onnx.py`; see the README.
+  `nx_iree/bench/yolo`; see the README.
   """
 
   @behaviour NxIREE.Tuning

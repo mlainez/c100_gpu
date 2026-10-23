@@ -96,8 +96,8 @@ IREE device profiling with
 `--device_profiling_mode=dispatch-events,device-queue-events,queue-events`
 records Vulkan dispatch timestamps; `--dispatch_statistics` does not.
 
-The system's `package/c100-gpu` Buildroot package supplies the boot-time
-`c100-limits` script, independently of this library.
+The system's device tree sets the board's CPU, GPU and memory clocks at boot;
+this library does not touch them.
 
 ## Development
 

@@ -19,6 +19,15 @@ defmodule C100GPU.TuningTest do
     refute tuned.bytecode == plain.bytecode
   end
 
+  test "every spec is served for the Vulkan backend" do
+    for name <- [:maxwell_matmul, :yolov5s_maxwell] do
+      assert {:ok, spec, ["vulkan-spirv"]} = C100GPU.Tuning.fetch(name)
+      assert spec =~ "iree_codegen.tuning_spec_entrypoint"
+    end
+
+    assert C100GPU.Tuning.fetch(:unknown) == :error
+  end
+
   @tag :hardware
   test "the tuned matmul matches the CPU on the selected Vulkan device" do
     {:ok, devices} = NxIREE.list_devices("vulkan")

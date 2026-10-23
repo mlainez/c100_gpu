@@ -34,6 +34,42 @@ performance result.
 [Normal-devfreq matmul checks](docs/normal-dvfs.md) record the later
 continuous and idle-to-load measurements with the accepted firmware.
 
+## YOLOv5s through IREE on the GPU
+
+YOLOv5s (640x640, fp32) compiled by IREE for NVK runs at 589 ms per frame on
+the C100 (545 ms with the runtime's caching allocator), against 453 ms for
+ncnn on the four A57 cores, 1183 ms for ncnn's own Vulkan path and 931 ms for
+OpenCV DNN. Every output value matches OpenCV DNN's CPU result within 0.05.
+Three things make the compiled model fast enough to be usable:
+
+* `--iree-global-opt-use-im2col-for-convs` with channels-last preprocessing:
+  IREE's direct SPIR-V convolution codegen produces wrong output for NCHW 3x3
+  convolutions and takes about 300 ms per layer in NHWC;
+* `scripts/pad_yolov5_onnx.py`: a fourth zero input channel and a 256th zero
+  output channel on the detect heads give the stem and detect-head matmuls
+  dimensions the compiler can tile (K = 108 and N = 255 fell back to a
+  2 GFLOPS path that cost 45 % of the frame);
+* `priv/tuning/yolov5s_maxwell.mlir` (`iree_tuning: {C100GPU.Tuning,
+  :yolov5s_maxwell}`): thinner workgroups with an 8x4 output block per thread
+  for the stem and the 20x20-map matmuls. The `turing` target preset is the
+  fastest of IREE's presets here; `pascal` is within 5 %, `rdna1` is 50 %
+  slower.
+
+```sh
+python3 scripts/pad_yolov5_onnx.py yolov5s-fp32.onnx yolov5s-padded.onnx
+iree-import-onnx yolov5s-padded.onnx -o yolov5s.mlir
+iree-compile yolov5s.mlir --iree-input-type=onnx --iree-hal-target-backends=vulkan-spirv \
+  --iree-vulkan-target=turing --iree-global-opt-use-im2col-for-convs \
+  '--iree-preprocessing-pass-pipeline=builtin.module(util.func(iree-preprocessing-convert-conv-to-channels-last))' \
+  --iree-codegen-transform-dialect-library=priv/tuning/yolov5s_maxwell.mlir -o yolov5s.vmfb
+```
+
+The exported ultralytics model must be fp32 (the fp16 export exceeds the
+GM20B's 48 KB of shared memory in IREE's codegen). Of the remaining 532 ms of
+GPU time per frame, matmuls take 346 ms (26-78 GFLOPS depending on the shape),
+im2col 81 ms, layout transposes 46 ms and the detect head's odd-width copies
+38 ms; vectorized tilings for the im2col and transposes measured slower.
+
 The current development dependency uses the sibling `../nx_iree` checkout.
 Run `mix deps.get` and `mix test` for ordinary tests. The Vulkan matmul
 correctness check is opt-in:

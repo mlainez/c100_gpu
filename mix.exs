@@ -7,7 +7,7 @@ defmodule C100GPU.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       deps: [
-        {:nx_iree, github: "mlainez/nx_iree", branch: "jetson-nvk"},
+        {:nx_iree, github: "mlainez/nx_iree"},
         {:exla, "~> 1.0", only: :test}
       ]
     ]
